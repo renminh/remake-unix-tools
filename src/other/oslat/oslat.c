@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #define NUM_SYSCALLS 1000
+#define NUM_CONTEXT_SWITCHES 500
 
 /*
  * oslat means os latency for 
@@ -20,7 +21,7 @@
  */
 
 static inline uint64_t get_delta(const uint64_t start_s, const uint64_t end_s,
-                   const uint64_t start_ns, const uint64_t end_ns) {
+                                 const uint64_t start_ns, const uint64_t end_ns) {
     return (end_s - start_s) * 1e9 + (end_ns - start_ns);
 }
 
@@ -28,10 +29,12 @@ int main(int argc, char **argv) {
     struct timespec ts;
     uint64_t sum_ns = 0;
 
-    printf("RUNNING %d SYSCALLS FOR BENCHMARKING:\n",
-           NUM_SYSCALLS);
-    
-    for (int i = 0; i < NUM_SYSCALLS; i++) {
+    printf(" - RUNNING %d SYSCALLS\n", NUM_SYSCALLS);
+    printf(" - RUNNING %d CONTEXT_SWITCHES\n",
+           NUM_CONTEXT_SWITCHES);
+
+
+    for (int i = 0; i < NUM_SYSCALLS / 2; i++) {
         uint64_t start_s, end_s;
         uint64_t start_ns, end_ns;
 
@@ -42,7 +45,7 @@ int main(int argc, char **argv) {
         clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
         end_s = (uint64_t) ts.tv_sec;
         end_ns = (uint64_t) ts.tv_nsec;
-        
+
         sum_ns += get_delta(start_s, end_s, start_ns, end_ns);
     }
 
@@ -57,12 +60,20 @@ int main(int argc, char **argv) {
      *
      */
 
-    // todo, add ping pong for pipes
-    // search how
+    char *buffer;       // buffer to inherit by parent and child
+    size_t bufsize = 1;
 
-    int fd[2];
+    buffer = (char *) malloc(bufsize * sizeof(char));
 
-    if (pipe(fd) < 0) {
+    if (buffer == NULL) {
+        perror("malloc");
+        exit(1);
+    }
+
+    int ptcfd[2];   // parent to child pipe (ptc)
+    int ctpfd[2];   // child to parent pipe (ctp)
+
+    if (pipe(ptcfd) < 0 || pipe(ctpfd)) {
         perror("pipe");
         exit(1);
     }
@@ -72,26 +83,50 @@ int main(int argc, char **argv) {
     if (pid < 0) {
         perror("fork");
         exit(1);
-    } else if (pid == 0) {
-        fprintf(stdin, "nothing\n");
-    } else {
+    }
+
+    if (pid == 0) {         // child
+        close(ctpfd[0]);    // child to parent read is unused
+        close(ptcfd[1]);    // parent to child write is unused
+
+        for (int i = 0; i < NUM_CONTEXT_SWITCHES; i++) {
+            write(ctpfd[1], "p", bufsize);
+            read(ptcfd[0], buffer, bufsize);   // do nothing with it
+        }
+
+        close(ctpfd[1]);
+        close(ptcfd[0]);
+
+    } else {                // parent
+        close(ptcfd[0]);    // parent to child read is unused
+        close(ctpfd[1]);    // child to parent write is unused
+
         uint64_t start_s, end_s;
         uint64_t start_ns, end_ns;
-
-        clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-        start_s = (uint64_t) ts.tv_sec;
-        start_ns = (uint64_t) ts.tv_nsec;
-
-        pid_t rc_wait = wait(NULL);
-        clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-        end_s = (uint) ts.tv_sec;
-        end_ns = (uint) ts.tv_nsec;
-
-        sum_ns = get_delta(start_s, end_s, start_ns, end_ns);
+        sum_ns = 0;
         
-        printf("Average context switch time:\t%0.2fμs\n",
-               ((float) sum_ns - avg_ns_syscalls) / 1000);
+        for (int i = 0; i < NUM_CONTEXT_SWITCHES / 2; i++) {
+            clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+            start_s = (uint64_t) ts.tv_sec;
+            start_ns = (uint64_t) ts.tv_nsec;
+
+            write(ptcfd[1], "p", bufsize);
+            read(ctpfd[0], buffer, bufsize);   // do nothing with it
+
+            clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+            end_s = (uint) ts.tv_sec;
+            end_ns = (uint) ts.tv_nsec;
+
+            sum_ns += get_delta(start_s, end_s, start_ns, end_ns);
+        }
+        close(ptcfd[1]);
+        close(ctpfd[0]);
+
+        float avg_ns_ctxsw = (sum_ns / NUM_CONTEXT_SWITCHES);
+
+        printf("Average context switch time:\t%0.2fns\n",
+                avg_ns_ctxsw);
     }
-    
+
     return 0;
 }
