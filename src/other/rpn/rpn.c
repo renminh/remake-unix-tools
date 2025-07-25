@@ -4,6 +4,17 @@
 
 #define NUMBER '0'
 
+/*
+ *
+ * Program is currently doing a very basic job on parsing
+ * i.e, it cannot handle any number that is not single digit
+ *
+ * DOESN'T WORK X   -> 23 5 +
+ *
+ * WHAT WORKS       -> 2 3 +
+ *
+ */
+
 int getop(const char ch) {
     if (ch >= '0' && ch <= '9')
         return NUMBER;
@@ -33,16 +44,11 @@ float do_op(const float a, const float b, const char op) {
     return res;
 }
 
-void log_stack_info(Stack stack) {
-    printf("stack size:\t%d\n", size(&stack));
-    printf("stack pointer:\t%d\n", stack.sp);
-    printf("stack is empty:\t%s\n", (is_empty(&stack)) ? "true" : "false");
-}
-
 int main(int argc, char *argv[]) {
     Stack stack;
     stack.sp = 0;
-    int ch, first_op, second_op;
+    int ch; 
+    float first_op, second_op;
 
     printf("Enter a reverse polish notation expression: ");
     while ((ch = getchar()) != '\n') {
@@ -50,8 +56,7 @@ int main(int argc, char *argv[]) {
 
         switch (type) {
             case NUMBER:
-                push(&stack, (float) (ch - '0'));
-                if (push < 0) {
+                if (push(&stack, (float) (ch - '0')) < 0) {
                     fprintf(stderr, "error: stack overflow\n");
                     exit(1);
                 }
