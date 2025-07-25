@@ -9,7 +9,7 @@
 #define NUM_CONTEXT_SWITCHES 500
 
 /*
- * oslat means os latency for 
+ * oslat means os latency to 
  * benchmark syscalls & context switches
  */
 
@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
     /*
      *
      * for context switching, we can use pipes
-     * via ping pong back and forth some nth amount
+     * via ping pong some nth amount
      *
      */
 
@@ -94,6 +94,7 @@ int main(int argc, char **argv) {
             read(ptcfd[0], buffer, bufsize);   // do nothing with it
         }
 
+        free(buffer);
         close(ctpfd[1]);
         close(ptcfd[0]);
 
@@ -119,6 +120,8 @@ int main(int argc, char **argv) {
 
             sum_ns += get_delta(start_s, end_s, start_ns, end_ns);
         }
+
+        free(buffer);
         close(ptcfd[1]);
         close(ctpfd[0]);
 
@@ -126,6 +129,11 @@ int main(int argc, char **argv) {
 
         printf("Average context switch time:\t%0.2fns\n",
                 avg_ns_ctxsw);
+       
+        float perc_diff = ((avg_ns_ctxsw - avg_ns_syscalls) / avg_ns_syscalls) * 100;
+        printf("\nSummary\n");
+        printf(" - Context switching is %0.2f%% slower than syscalls\n",
+               perc_diff);
     }
 
     return 0;
