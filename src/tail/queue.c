@@ -1,5 +1,12 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include "queue.h"
+
+/*
+ * my life would've been way easier if i had just
+ * wrapped the index instead of checking the range
+ * between front and back...
+ */
 
 int init_queue(Queue *queue, size_t size_of_queue)
 {
@@ -31,24 +38,18 @@ int get_offset(Queue *queue, int offset_flag)
 {
     int offset;
     switch (offset_flag) {
-
-        // this is fine for the first time we dequeue
-        // but on the second time, because we aren't actually moving everything down
-        // it'll continue to remain on the old element
         case FRONT_OFFSET:
-            offset = (queue->back - queue->front) \
-                - (queue->back-queue->front);
+            offset = queue->front;
             break;
         case BACK_OFFSET: 
-            offset = queue->back + queue->front + 1;
+            offset = queue->back;
             break;
         default:
-            offset = (queue->back - queue->front) \
-                - (queue->back-queue->front);
+            offset = queue->front;
             break;
     }
 
-    return offset;
+    return offset % (queue->max_size);
 }
 
 bool is_empty(Queue *queue)
@@ -58,12 +59,8 @@ bool is_empty(Queue *queue)
 
 bool is_full(Queue *queue)
 {
-    // issue with the math here
-    // for example if there is 1 element,
-    // running size will be 2 instead of 1
-    // b = 1 - f = -1 == 2
-    int running_size = queue->back - queue->front;
-    return (running_size > queue->max_size) ? true : false;
+    int running_size = queue->back - queue->front - 1;
+    return (running_size == queue->max_size) ? true : false;
 }
 
 int enqueue(Queue *queue, char *s)
@@ -77,17 +74,20 @@ int enqueue(Queue *queue, char *s)
     return 0;
 }
 
+void clear_queue(Queue *queue)
+{
+    for (int i = 0; i < queue->max_size; i++)
+        queue->data[i] = NULL;
+
+    queue->front = -1;
+    queue->back = 0;
+}
+
 char *dequeue(Queue *queue)
 {
     if (is_empty(queue))
         return NULL;
     
-    /*
-     * we aren't actually dequeing anything in the real
-     * queue unless we wrap around but even so
-     * the queue contains the old code(this isn't a stack. we're using the heap)
-     */
-
     queue->front += 1;
     return *(queue->data + get_offset(queue, FRONT_OFFSET));
 }

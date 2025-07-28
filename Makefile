@@ -10,7 +10,7 @@ oslat: src/other/oslat/oslat.c
 	gcc $(CFLAGS) -o bin/oslat src/other/oslat/oslat.c
 
 tail: src/tail/tail.c
-	gcc $(CFLAGS) -o bin/tail src/tail/test.c src/tail/queue.c
+	gcc $(CFLAGS) -o bin/tail src/tail/tail.c src/tail/queue.c
 
 rpn: src/other/rpn/rpn.c
 	gcc $(CFLAGS) -o bin/rpn src/other/rpn/rpn.c src/other/rpn/stack.c

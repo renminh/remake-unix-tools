@@ -30,5 +30,6 @@ bool is_full(Queue *queue);
 int enqueue(Queue *queue, char *s);
 char *dequeue(Queue *queue);
 char *peek(Queue *queue);
+void clear_queue(Queue *queue);
 
 #endif /* QUEUE_H */
