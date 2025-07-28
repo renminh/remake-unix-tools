@@ -23,33 +23,17 @@ int init_queue(Queue *queue, size_t size_of_queue)
     return 0;
 }
 
-/* 
- * indexing through the array will be done here to handle
- * front and back constantly changing or increasing,
- * which will end up surpassing the bounds of the
- * original max_size but getting the difference
- * will solve that issue
- *
- * the queue will continue to keep the old remnants in the heap,
- * but since we are converting this queue to a circular queue
- * we can ignore it via the front and back pointers
+/*
+ * get_offset() handles grabbing the index based
+ * on the actual index of front/back, as both can
+ * surpass max_size (front/back do not wrap around)
  */
 int get_offset(Queue *queue, int offset_flag)
 {
-    int offset;
-    switch (offset_flag) {
-        case FRONT_OFFSET:
-            offset = queue->front;
-            break;
-        case BACK_OFFSET: 
-            offset = queue->back;
-            break;
-        default:
-            offset = queue->front;
-            break;
-    }
-
-    return offset % (queue->max_size);
+    int index = (offset_flag == FRONT_OFFSET) \
+        ? queue->front \
+        : queue-> back;
+    return index % (queue->max_size);
 }
 
 bool is_empty(Queue *queue)
@@ -76,9 +60,12 @@ int enqueue(Queue *queue, char *s)
 
 void clear_queue(Queue *queue)
 {
-    for (int i = 0; i < queue->max_size; i++)
+    while (!is_empty(queue)) {
+        char *dequeued = dequeue(queue);
+        free(dequeued);
         queue->data[i] = NULL;
-
+    }
+    
     queue->front = -1;
     queue->back = 0;
 }
