@@ -1,6 +1,12 @@
-# repo containing c programs for practices
+# remake of unix utilities
 
-this includes utilities in unix systems
-but some are also just whatever programs i've made
-for practice
-but
+a repo containing code to practice my C and UNIX programming.
+these contain my attempts at writing them!
+
+## current implementations
+
+the current tools and utilities that i've done
+
+- grep
+- tail
+- cat
