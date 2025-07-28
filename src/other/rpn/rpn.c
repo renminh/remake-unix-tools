@@ -78,7 +78,6 @@ int main(int argc, char *argv[]) {
     }
 
     if (stack.sp != 1) {
-        // log_stack_info(stack);
         fprintf(stderr, "error: incomplete or broken expression\n");
         exit(1);
     }
